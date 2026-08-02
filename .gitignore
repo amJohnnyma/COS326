@@ -1,0 +1,9 @@
+*.class
+*.log
+*.jar
+*.war
+*.ear
+*.nar
+.DS_STORE
+Thumbs.db
+*.odb
