@@ -1,6 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
-import javax.swing.border.EmptyBorder;;
+import javax.swing.border.EmptyBorder;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class Gui{
     // open standalone window containing any jpanel
@@ -22,6 +24,14 @@ public class Gui{
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("COS326 Practical 1");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+            frame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    API.getInstance().close(); // Safely close ObjectDB connection
+                }
+            });
+
             frame.setPreferredSize(new Dimension(800,600));
 
             JPanel root = new JPanel(new BorderLayout(0,16));
@@ -30,6 +40,7 @@ public class Gui{
             //main window
             JLabel welcomeLbl = new JLabel("Main Control Dashboard", SwingConstants.CENTER);
             welcomeLbl.setFont(welcomeLbl.getFont().deriveFont(18.f));
+
             root.add(welcomeLbl, BorderLayout.CENTER);
 
             //bottom nav
@@ -37,6 +48,7 @@ public class Gui{
             JButton btnResearchers = new JButton("Researchers");
             JButton btnEquipment = new JButton("Equipment");
             JButton btnBookings = new JButton("Bookings");
+            JButton btnPopulate = new JButton("Populate odb");
             JLabel navLbl = new JLabel("Navigation: ");
 
             btnResearchers.addActionListener(e ->
@@ -50,6 +62,12 @@ public class Gui{
             btnBookings.addActionListener(e ->
                     openWindow("Bookings", new BookingsPanel())
                     );
+
+            btnPopulate.addActionListener(e ->
+                    {
+                    API.getInstance().populate();
+                    }
+                    );
     
             hbox.add(navLbl);
             hbox.add(Box.createHorizontalGlue());
@@ -58,6 +76,8 @@ public class Gui{
             hbox.add(btnEquipment);
             hbox.add(Box.createRigidArea(new Dimension(8,0)));
             hbox.add(btnBookings);
+            hbox.add(Box.createRigidArea(new Dimension(8,0)));
+            hbox.add(btnPopulate);
 
 
             root.add(hbox, BorderLayout.SOUTH);
@@ -73,9 +93,11 @@ public class Gui{
 abstract class BasePanel extends JPanel
 {
 
+
     public static void openWindow(String title, JPanel contentPanel)
     {
         JFrame window = new JFrame(title);
+        
 
         //dont kill whole app when closing child window
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -101,6 +123,7 @@ abstract class BasePanel extends JPanel
 
         return panel;
     }
+
 
 }
 
@@ -177,6 +200,9 @@ class ResearchersPanel extends BasePanel
 
         add(tabbedPane, BorderLayout.CENTER);
 
+
+        // now populate the output
+        tab1Output.setText(API.getInstance().getAllResearcherOutput());
 
     }
 }
@@ -296,9 +322,8 @@ class RegisterPanel extends BasePanel
         return;
     }
 
-    // 3. Process or print data
-    System.out.println("Researcher: " + firstName + " " + lastName);
-    System.out.println("Dept: " + department + " | Email: " + email);
+    boolean success = API.getInstance().testRegister();
+
 });
 ////////////////////
 
