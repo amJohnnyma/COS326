@@ -109,12 +109,70 @@ public class API{
     //bools so i can get feedback on the UI
     public boolean registerResearcher(String fullName, String department, String email)
     {
-        return false;
+        EntityManager em = emf.createEntityManager();
+        try
+        {
+            em.getTransaction().begin();
+            Researcher r = new Researcher(
+                    fullName,
+                    department,
+                    email
+                    );
+            em.persist(r);
+
+            em.getTransaction().commit();
+            
+        }
+        catch(Exception ex)
+        {
+
+            if(em.getTransaction().isActive())
+            {
+                em.getTransaction().rollback();
+            }
+            ex.printStackTrace();
+            return false;
+        }
+        finally {
+            em.close();
+            return true;
+        }
     }
 
     public boolean registerEquipment(String name, String category, String purchaseDate, double replacementCost, String status)
     {
-        return false;
+
+        EntityManager em = emf.createEntityManager();
+        try
+        {
+            em.getTransaction().begin();
+            Equipment r = new Equipment(
+                    name,
+                    category,
+                    purchaseDate,
+                    replacementCost,
+                    status
+                    );
+            em.persist(r);
+
+            em.getTransaction().commit();
+            
+        }
+        catch(Exception ex)
+        {
+
+            if(em.getTransaction().isActive())
+            {
+                em.getTransaction().rollback();
+            }
+            ex.printStackTrace();
+            return false;
+        }
+        finally {
+            em.close();
+            return true;
+        }
+
     }
 
     public boolean createBooking()
@@ -129,6 +187,11 @@ public class API{
     }
 
     public String searchResearcher(Long rID)
+    {
+        return "None";
+    }
+
+    public String searchResearcher(Long rID, String name, String department, String email)
     {
         return "None";
     }
@@ -152,7 +215,36 @@ public class API{
 
     public String getAllEquipmentOutput()
     {
-        return "None";
+         EntityManager em = emf.createEntityManager();
+         try
+         {
+             TypedQuery<Equipment> query = em.createQuery(
+                     "SELECT e FROM Equipment e",
+                     Equipment.class);
+             List<Equipment> equipments= query.getResultList();
+
+             StringBuilder sb = new StringBuilder();
+
+             for(Equipment e:equipments)
+             {
+                 sb.append(e.toString()).append("\n");
+             }
+
+             String resultText = sb.toString();
+             return resultText.isEmpty() ? "No Equipment found" : resultText;
+
+         }
+         catch (Exception ex)
+         {
+
+            ex.printStackTrace();
+            return "Error";
+             
+         }
+         finally
+         {
+             em.close();
+         }
     }
 
     public String getAvailableEquipment()

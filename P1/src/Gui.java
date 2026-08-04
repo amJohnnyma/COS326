@@ -3,6 +3,38 @@ import java.awt.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+
+
+final class DateValidator
+{
+
+    // format dd/MM/yyyy
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter
+        .ofPattern("dd/MM/uuuu")
+        .withResolverStyle(ResolverStyle.STRICT);
+
+    public static boolean isValidPastDate(String dateStr)
+    {
+        if(dateStr == null || dateStr.isEmpty())
+        {
+            return false;
+        }
+        try{
+            LocalDate parsedDate = LocalDate.parse(dateStr, DATE_FORMATTER);
+            LocalDate today = LocalDate.now();
+            return !parsedDate.isAfter(today);
+
+        }
+        catch (DateTimeParseException e)
+        {
+            return false;
+        }
+    }
+}
 
 public class Gui{
     // open standalone window containing any jpanel
@@ -65,10 +97,10 @@ public class Gui{
 
             btnPopulate.addActionListener(e ->
                     {
-                    API.getInstance().populate();
+                        API.getInstance().populate();
                     }
                     );
-    
+
             hbox.add(navLbl);
             hbox.add(Box.createHorizontalGlue());
             hbox.add(btnResearchers);
@@ -97,7 +129,7 @@ abstract class BasePanel extends JPanel
     public static void openWindow(String title, JPanel contentPanel)
     {
         JFrame window = new JFrame(title);
-        
+
 
         //dont kill whole app when closing child window
         window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -108,21 +140,21 @@ abstract class BasePanel extends JPanel
         window.setVisible(true);
     }
 
-    public JPanel createLabeledPanel(String labelText, JTextField textField)
-    {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+public JPanel createLabeledPanel(String labelText, JComponent component)
+{
+    JPanel panel = new JPanel();
+    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        JLabel label = new JLabel(labelText);
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        textField.setAlignmentX(Component.LEFT_ALIGNMENT);
+    JLabel label = new JLabel(labelText);
+    label.setAlignmentX(Component.LEFT_ALIGNMENT);
+    component.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        panel.add(label);
-        panel.add(Box.createVerticalStrut(4));
-        panel.add(textField);
+    panel.add(label);
+    panel.add(Box.createVerticalStrut(4));
+    panel.add(component);
 
-        return panel;
-    }
+    return panel;
+}
 
 
 }
@@ -150,6 +182,14 @@ class ResearchersPanel extends BasePanel
         tab1Header.add(btnSearch);
 
 
+        JTextArea tab1Output = new JTextArea();
+        tab1Output.setEditable(false);
+        tab1Output.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        tab1Output.setText("--- RESEARCHER DATA LOG ---\nID: 001 | Name: Dr. Smith | Status: Active\nID: 002 | Name: Prof. Jones | Status: On Leave");
+        JScrollPane tab1Scroll = new JScrollPane(tab1Output);
+        tab1.add(tab1Header, BorderLayout.NORTH);
+        tab1.add(tab1Scroll, BorderLayout.CENTER);
+
         btnRegister.addActionListener(e ->
                 openWindow("Register", new RegisterPanel())
                 );
@@ -158,13 +198,15 @@ class ResearchersPanel extends BasePanel
                 openWindow("Search", new SearchPanel())
                 );
 
-        JTextArea tab1Output = new JTextArea();
-        tab1Output.setEditable(false);
-        tab1Output.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        tab1Output.setText("--- RESEARCHER DATA LOG ---\nID: 001 | Name: Dr. Smith | Status: Active\nID: 002 | Name: Prof. Jones | Status: On Leave");
-        JScrollPane tab1Scroll = new JScrollPane(tab1Output);
-        tab1.add(tab1Header, BorderLayout.NORTH);
-        tab1.add(tab1Scroll, BorderLayout.CENTER);
+        btnRefresh.addActionListener(e ->
+                {
+
+                    tab1Output.setText(API.getInstance().getAllResearcherOutput());
+
+                    tab1Scroll.getVerticalScrollBar().setValue(0);
+                }
+                );
+
 
 
         JPanel tab2 = new JPanel(new BorderLayout(0,8));
@@ -239,29 +281,83 @@ class EquipmentPanel extends BasePanel
 {
     public EquipmentPanel()
     {
+
         setLayout(new BorderLayout());
         setBorder(new EmptyBorder(8,8,8,8));
 
         JTabbedPane tabbedPane = new JTabbedPane();
 
-        JPanel tab1 = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        tab1.add(new JLabel("Overview"));
-        tab1.add(new JButton("Refresh"));
-        tab1.add(new JButton("Register"));
-        tab1.add(new JButton("Search"));
+        JPanel tab1 = new JPanel(new BorderLayout(0,8));
 
-        JPanel tab2 = new JPanel(new GridLayout());
-        tab2.add(new JLabel("Summary"));
+        JPanel tab1Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
+        JButton btnRefresh = new JButton("Refresh");
+        JButton btnRegister = new JButton("Register");
+        JButton btnSearch = new JButton("Search");
+        tab1Header.add(btnRefresh);
+        tab1Header.add(btnRegister);
+        tab1Header.add(btnSearch);
 
-        JPanel tab3 = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        tab3.add(new JButton("Available"));
-        tab3.add(new JButton("Never Booked"));
+
+        JTextArea tab1Output = new JTextArea();
+        tab1Output.setEditable(false);
+        tab1Output.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        tab1Output.setText("Equipment");
+        JScrollPane tab1Scroll = new JScrollPane(tab1Output);
+        tab1.add(tab1Header, BorderLayout.NORTH);
+        tab1.add(tab1Scroll, BorderLayout.CENTER);
+
+        btnRegister.addActionListener(e ->
+                openWindow("Register", new RegisterPanel())
+                );
+
+        btnSearch.addActionListener(e ->
+                openWindow("Search", new SearchPanel())
+                );
+
+        btnRefresh.addActionListener(e ->
+                {
+
+                    tab1Output.setText(API.getInstance().getAllEquipmentOutput());
+                    tab1Scroll.getVerticalScrollBar().setValue(0);
+                }
+                );
+
+
+
+        JPanel tab2 = new JPanel(new BorderLayout(0,8));
+
+        JPanel tab2Header = new JPanel(new FlowLayout(FlowLayout.LEFT,12,0));
+        tab2Header.add(new JLabel("Profiles"));
+
+        JPanel searchGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        searchGroup.setBorder(BorderFactory.createTitledBorder("Search Equipment"));
+
+        JTextField eID= new JTextField("ENTER EQUIPMENT ID", 18);
+        JButton checkBookingsBtn = new JButton("Check equipment + history");
+
+        searchGroup.add(eID);
+        searchGroup.add(checkBookingsBtn);
+
+
+        tab2Header.add(searchGroup);
+
+        JTextArea tab2Output = new JTextArea();
+        tab2Output.setEditable(false);
+        tab2Output.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        tab2Output.setText("Select action above to query");
+
+        JScrollPane tab2Scroll = new JScrollPane(tab2Output);
+        tab2.add(tab2Header, BorderLayout.NORTH);
+        tab2.add(tab2Scroll, BorderLayout.CENTER);
 
         tabbedPane.addTab("Overview", tab1);
-        tabbedPane.addTab("Info", tab2);
-        tabbedPane.addTab("Additional", tab3);
+        tabbedPane.addTab("Directory", tab2);
 
         add(tabbedPane, BorderLayout.CENTER);
+
+
+        // now populate the output
+        tab1Output.setText(API.getInstance().getAllEquipmentOutput());
     }
 }
 
@@ -276,7 +372,7 @@ class RegisterPanel extends BasePanel
     private JTextField eCat;
     private JTextField ePurchDate;
     private JTextField eRepCost;
-    private JTextField eStatus;
+    private JComboBox eStatus;
 
     public RegisterPanel()
     {
@@ -289,9 +385,7 @@ class RegisterPanel extends BasePanel
         JPanel tab1 = new JPanel(new BorderLayout(0,8));
 
         JPanel tab1Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
-        JButton btnRefresh = new JButton("Refresh");
         JButton btnRegister = new JButton("Register");
-        tab1Header.add(btnRefresh);
         tab1Header.add(btnRegister);
 
         JPanel inputGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 5));
@@ -308,24 +402,32 @@ class RegisterPanel extends BasePanel
         inputGroup.add(createLabeledPanel("Department:", depInput));
         inputGroup.add(createLabeledPanel("Email:", emailInput));
 
-/* TEMP TEST */
- btnRegister.addActionListener(e -> {
-    // 1. Extract values
-    String firstName  = fNameInput.getText().trim();
-    String lastName   = sNameInput.getText().trim();
-    String department = depInput.getText().trim();
-    String email      = emailInput.getText().trim();
+        btnRegister.addActionListener(e -> {
 
-    // 2. Validate inputs (example check)
-    if (firstName.isEmpty() || lastName.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "First and Last Name are required!", "Error", JOptionPane.ERROR_MESSAGE);
-        return;
-    }
+            String firstName  = fNameInput.getText().trim();
+            String lastName   = sNameInput.getText().trim();
+            String department = depInput.getText().trim();
+            String email      = emailInput.getText().trim();
 
-    boolean success = API.getInstance().testRegister();
+            if (firstName.isEmpty() || lastName.isEmpty() || department.isEmpty() || email.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "All fields are required", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-});
-////////////////////
+            // check the email
+            // TODO
+
+            boolean success = API.getInstance().registerResearcher(firstName + " " + lastName, department, email);
+
+            if(!success)
+            {
+                JOptionPane.showMessageDialog(null, "An error occurred!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+            else {
+                JOptionPane.showMessageDialog(this, "Researcher registered successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            }
+
+        });
 
 
         tab1.add(tab1Header, BorderLayout.NORTH);
@@ -335,9 +437,7 @@ class RegisterPanel extends BasePanel
         JPanel tab2 = new JPanel(new BorderLayout(0,8));
 
         JPanel tab2Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
-        JButton btnRefresh2 = new JButton("Refresh");
         JButton btnRegister2 = new JButton("Register");
-        tab2Header.add(btnRefresh2);
         tab2Header.add(btnRegister2);
 
         JPanel inputGroup2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 5));
@@ -348,28 +448,65 @@ class RegisterPanel extends BasePanel
         eCat = new JTextField(18);
         ePurchDate = new JTextField(18);
         eRepCost = new JTextField(18);
-        eStatus = new JTextField(18);
+        eStatus = new JComboBox<>(new String[]{"Available", "Out of Service"});
 
         inputGroup2.add(createLabeledPanel("Name:", eName));
         inputGroup2.add(createLabeledPanel("Category:",eCat));
-        inputGroup2.add(createLabeledPanel("Purchase Date:",ePurchDate));
+        inputGroup2.add(createLabeledPanel("Purchase Date (dd/mm/yyyy):",ePurchDate));
         inputGroup2.add(createLabeledPanel("Replacement Cost:",eRepCost));
         inputGroup2.add(createLabeledPanel("Status:",eStatus));
 
-/* TEMP TEST */
- btnRegister2.addActionListener(e -> {
-    // 1. Extract values
-    String name = eName.getText().trim();
-    String cat=eCat.getText().trim();
-    String pd=ePurchDate.getText().trim();
-    String repCost=eRepCost.getText().trim();
-    String status=eStatus.getText().trim();
+        btnRegister2.addActionListener(e -> {
+
+            String name = eName.getText().trim();
+            String cat=eCat.getText().trim();
+            String pd=ePurchDate.getText().trim();
+
+            String repoCostString = eRepCost.getText().trim();
+            double repCost = 0.0;
+
+            String status=eStatus.getSelectedItem().toString();
+            try {
+
+                repCost = Double.parseDouble(repoCostString);
+
+                // check the date
+                if (!DateValidator.isValidPastDate(pd))
+                {
+
+                    JOptionPane.showMessageDialog(null, "Invalid date", "Error", JOptionPane.ERROR_MESSAGE);
+
+                }
+
+                if (repCost < 0)
+                {
+
+                    JOptionPane.showMessageDialog(null, "Replacement cost may not be negative", "Error", JOptionPane.ERROR_MESSAGE);
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+
+                JOptionPane.showMessageDialog(null, "Field: Replacement Cost -> " + ex, "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (name.isEmpty() || cat.isEmpty() || pd.isEmpty() || status.isEmpty() || eRepCost.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "All fields are required", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
 
-    System.out.println("Name, Category: " + name + ", " + cat);
-    System.out.println("pd: " + pd + " | rep cost: " + repCost + " | status: " + status);
-});
-////////////////////
+            boolean success = API.getInstance().registerEquipment(name, cat, pd, repCost, status);
+            if(!success)
+            {
+                JOptionPane.showMessageDialog(null, "An error occurred!", "Error", JOptionPane.ERROR_MESSAGE);
+            }else {
+                JOptionPane.showMessageDialog(this, "Equipment registered successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
 
 
         tab2.add(tab2Header, BorderLayout.NORTH);
@@ -407,9 +544,7 @@ class SearchPanel extends BasePanel
         JPanel tab1 = new JPanel(new BorderLayout(0,8));
 
         JPanel tab1Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
-        JButton btnRefresh = new JButton("Refresh");
         JButton btnSearch = new JButton("Search");
-        tab1Header.add(btnRefresh);
         tab1Header.add(btnSearch);
 
         JPanel inputGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 5));
@@ -420,32 +555,31 @@ class SearchPanel extends BasePanel
         sNameInput = new JTextField(18);
         depInput   = new JTextField(18);
         emailInput = new JTextField(18);
+        JTextField IDInput = new JTextField(18);
 
+
+        inputGroup.add(createLabeledPanel("ID:", IDInput));
         inputGroup.add(createLabeledPanel("First Name:", fNameInput));
         inputGroup.add(createLabeledPanel("Last Name:", sNameInput));
         inputGroup.add(createLabeledPanel("Department:", depInput));
         inputGroup.add(createLabeledPanel("Email:", emailInput));
 
-/* TEMP TEST */
- btnSearch.addActionListener(e -> {
-    // 1. Extract values
-    String firstName  = fNameInput.getText().trim();
-    String lastName   = sNameInput.getText().trim();
-    String department = depInput.getText().trim();
-    String email      = emailInput.getText().trim();
+        btnSearch.addActionListener(e -> {
+            String firstName = fNameInput.getText().trim();
+            String lastName = sNameInput.getText().trim();
+            String department = depInput.getText().trim();
+            String email = emailInput.getText().trim();
+            String id = IDInput.getText().trim();
 
-    // 2. Validate inputs (example check)
-    if (firstName.isEmpty() && lastName.isEmpty() && department.isEmpty() &&email.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Atleast one field is required!", "Error", JOptionPane.ERROR_MESSAGE);
-        return;
-    }
+            if (firstName.isEmpty() && lastName.isEmpty() && department.isEmpty() &&email.isEmpty() && id.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Atleast one field is required!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-    // 3. Process or print data
-    System.out.println("Searching for: ");
-    System.out.println("Researcher: " + firstName + " " + lastName);
-    System.out.println("Dept: " + department + " | Email: " + email);
-});
-////////////////////
+            System.out.println("Searching for: ");
+            System.out.println("Researcher: " + firstName + " " + lastName);
+            System.out.println("Dept: " + department + " | Email: " + email);
+        });
 
 
         tab1.add(tab1Header, BorderLayout.NORTH);
@@ -453,6 +587,49 @@ class SearchPanel extends BasePanel
 
 
         JPanel tab2 = new JPanel(new BorderLayout(0,8));
+
+        JPanel tab2Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
+        JButton btnSearch2 = new JButton("Search");
+        tab2Header.add(btnSearch2);
+
+        JPanel inputGroup2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 5));
+        inputGroup2.setBorder(BorderFactory.createTitledBorder("Enter Details for Search"));
+
+        //is this slow? probably fine
+        JTextField eIDInput = new JTextField(18);
+        JTextField  eNameInput = new JTextField(18);
+        JTextField eCatInput= new JTextField(18);
+        JTextField  eDateInput= new JTextField(18);
+        JTextField repCostInput= new JTextField(18);
+        JTextField statusInput= new JTextField(18);
+
+
+        inputGroup2.add(createLabeledPanel("ID:", eIDInput));
+        inputGroup2.add(createLabeledPanel("Name:", eNameInput));
+        inputGroup2.add(createLabeledPanel("Category:",eCatInput));
+        inputGroup2.add(createLabeledPanel("Purchase Date:", eDateInput));
+        inputGroup2.add(createLabeledPanel("Replacement Cost:", repCostInput));
+        inputGroup2.add(createLabeledPanel("Status:", statusInput));
+
+        btnSearch2.addActionListener(e -> {
+            String eName = eNameInput.getText().trim();
+            String  eCat= eCatInput.getText().trim();
+            String ePD= eDateInput.getText().trim();
+            String eRepCost= repCostInput.getText().trim();
+            String eStatus= statusInput.getText().trim();
+            String eID = eIDInput.getText().trim();
+
+            if (eName.isEmpty() && eCat.isEmpty() && ePD.isEmpty() && eRepCost.isEmpty() && eStatus.isEmpty() && eID.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Atleast one field is required!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+        });
+
+
+        tab2.add(tab2Header, BorderLayout.NORTH);
+        tab2.add(inputGroup2, BorderLayout.CENTER);
+
         JPanel tab3 = new JPanel(new BorderLayout(0,8));
 
         tabbedPane.add("Researcher", tab1);
