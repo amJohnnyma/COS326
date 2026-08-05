@@ -188,7 +188,48 @@ public class API{
 
     public String searchResearcher(Long rID)
     {
-        return "None";
+
+         EntityManager em = emf.createEntityManager();
+         try
+         {
+             TypedQuery<Researcher> query = em.createQuery(
+                     "SELECT r FROM Researcher r WHERE r.rID = :rID",
+                     Researcher.class).setParameter("rID", rID);
+             List<Researcher> researchers = query.getResultList();
+
+             StringBuilder sb = new StringBuilder();
+
+             for(Researcher r : researchers)
+             {
+                 sb.append(r.toString()).append("\n");
+
+                 List<Booking> bookings = r.getBookings();
+
+                 for(Booking b : bookings)
+                 {
+                     sb.append(b.toString()).append("\n");
+                 }
+
+             }
+
+
+
+
+             String resultText = sb.toString();
+             return resultText.isEmpty() ? "No researchers found" : resultText;
+
+         }
+         catch (Exception ex)
+         {
+
+            ex.printStackTrace();
+            return "Error";
+             
+         }
+         finally
+         {
+             em.close();
+         }
     }
 
     public String searchResearcher(Long rID, String name, String department, String email)

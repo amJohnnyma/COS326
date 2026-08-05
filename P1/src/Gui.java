@@ -214,10 +214,10 @@ class ResearchersPanel extends BasePanel
         JPanel tab2Header = new JPanel(new FlowLayout(FlowLayout.LEFT,12,0));
         tab2Header.add(new JLabel("Profiles"));
 
-        JPanel searchGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel searchGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 12));
         searchGroup.setBorder(BorderFactory.createTitledBorder("Search Researcher"));
 
-        JTextField nameInput = new JTextField("ENTER RESEARCHER NAME", 18);
+        JTextField nameInput = new JTextField("ENTER RESEARCHER ID", 18);
         JButton checkBookingsBtn = new JButton("Check Current Bookings");
 
         searchGroup.add(nameInput);
@@ -225,8 +225,10 @@ class ResearchersPanel extends BasePanel
 
         JButton mostBookingsBtn = new JButton("Most Bookings");
 
+
+        searchGroup.add(mostBookingsBtn);
+
         tab2Header.add(searchGroup);
-        tab2Header.add(mostBookingsBtn);
 
         JTextArea tab2Output = new JTextArea();
         tab2Output.setEditable(false);
@@ -245,6 +247,25 @@ class ResearchersPanel extends BasePanel
 
         // now populate the output
         tab1Output.setText(API.getInstance().getAllResearcherOutput());
+
+
+        checkBookingsBtn.addActionListener(e -> 
+                {
+                    try
+                    {
+                        String txt = nameInput.getText().trim();
+                        Long id = Long.parseLong(txt);
+
+                        String result = API.getInstance().searchResearcher(id);
+                        tab2Output.setText(result);
+                    }
+                    catch(Exception ex)
+                    {
+
+                    JOptionPane.showMessageDialog(this, "Error. Check field", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                    }
+                });
 
     }
 }
