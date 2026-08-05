@@ -251,7 +251,37 @@ public class API{
 
     public String getEquipmentSummary()
     {
-        return "None";
+
+         EntityManager em = emf.createEntityManager();
+         try
+         {
+             TypedQuery<Equipment> query = em.createQuery(
+                     "SELECT e FROM Equipment e",
+                     Equipment.class);
+             List<Equipment> equipments= query.getResultList();
+
+
+             Double totalCost = 0.0;
+             for(Equipment e:equipments)
+             {
+                 totalCost += e.getReplacementCost();
+             }
+
+             String resultText = totalCost.toString();
+             return resultText.isEmpty() ? "No summary available" : "Equipment Summary: " + resultText;
+
+         }
+         catch (Exception ex)
+         {
+
+            ex.printStackTrace();
+            return "Error";
+             
+         }
+         finally
+         {
+             em.close();
+         }
     }
 
     public String getAllEquipmentOutput()

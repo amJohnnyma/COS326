@@ -314,9 +314,16 @@ class EquipmentPanel extends BasePanel
         JButton btnRefresh = new JButton("Refresh");
         JButton btnRegister = new JButton("Register");
         JButton btnSearch = new JButton("Search");
+        JLabel lblSummary = new JLabel("No summary available");
         tab1Header.add(btnRefresh);
         tab1Header.add(btnRegister);
         tab1Header.add(btnSearch);
+
+
+        lblSummary.setText(API.getInstance().getEquipmentSummary());
+
+
+        tab1Header.add(lblSummary);
 
 
         JTextArea tab1Output = new JTextArea();
@@ -340,6 +347,7 @@ class EquipmentPanel extends BasePanel
 
                     tab1Output.setText(API.getInstance().getAllEquipmentOutput());
                     tab1Scroll.getVerticalScrollBar().setValue(0);
+                    lblSummary.setText(API.getInstance().getEquipmentSummary());
                 }
                 );
 
