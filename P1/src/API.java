@@ -320,7 +320,40 @@ public class API{
 
     public String getAvailableEquipment()
     {
-        return "None";
+
+         EntityManager em = emf.createEntityManager();
+         try
+         {
+             TypedQuery<Equipment> query = em.createQuery(
+                     "SELECT e FROM Equipment e",
+                     Equipment.class);
+             List<Equipment> equipments= query.getResultList();
+
+             StringBuilder sb = new StringBuilder();
+
+             for(Equipment e:equipments)
+             {
+                 if (e.getStatus().equals("Available"))
+                 {
+                     sb.append(e.toString()).append("\n");
+                 }
+             }
+
+             String resultText = sb.toString();
+             return resultText.isEmpty() ? "No Equipment found" : resultText;
+
+         }
+         catch (Exception ex)
+         {
+
+            ex.printStackTrace();
+            return "Error";
+             
+         }
+         finally
+         {
+             em.close();
+         }
     }
 
     public String getResearcherBookings(Long rID)

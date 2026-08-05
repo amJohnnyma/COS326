@@ -358,14 +358,17 @@ class EquipmentPanel extends BasePanel
         JPanel tab2Header = new JPanel(new FlowLayout(FlowLayout.LEFT,12,0));
         tab2Header.add(new JLabel("Profiles"));
 
-        JPanel searchGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel searchGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 12));
         searchGroup.setBorder(BorderFactory.createTitledBorder("Search Equipment"));
 
         JTextField eID= new JTextField("ENTER EQUIPMENT ID", 18);
-        JButton checkBookingsBtn = new JButton("Check equipment + history");
+        JButton checkBookingsBtn = new JButton("Check history");
+        JButton checkAvailablebtn = new JButton("Check Available");
+
 
         searchGroup.add(eID);
         searchGroup.add(checkBookingsBtn);
+        searchGroup.add(checkAvailablebtn);
 
 
         tab2Header.add(searchGroup);
@@ -387,6 +390,12 @@ class EquipmentPanel extends BasePanel
 
         // now populate the output
         tab1Output.setText(API.getInstance().getAllEquipmentOutput());
+
+        checkAvailablebtn.addActionListener(e -> 
+                {
+                    String result = API.getInstance().getAvailableEquipment();
+                    tab2Output.setText(result);
+                });
     }
 }
 
