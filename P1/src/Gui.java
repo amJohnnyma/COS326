@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
+import java.time.LocalTime;
 
 
 final class DateValidator
@@ -33,6 +34,54 @@ final class DateValidator
         {
             return false;
         }
+    }
+
+    public static boolean isValidFutureDate(String dateStr)
+    {
+        if(dateStr == null || dateStr.isEmpty())
+        {
+            return false;
+        }
+        try{
+            LocalDate parsedDate = LocalDate.parse(dateStr, DATE_FORMATTER);
+            LocalDate today = LocalDate.now();
+            return parsedDate.isAfter(today);
+
+        }
+        catch (DateTimeParseException e)
+        {
+            return false;
+        }
+    }
+}
+
+final class TimeValidator
+{
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter
+        .ofPattern("HH:mm")
+        .withResolverStyle(ResolverStyle.STRICT);
+
+    public static boolean isValidStartEnd(String startTimeStr, String endTimeStr)
+    {
+        if (startTimeStr == null || startTimeStr.trim().isEmpty() ||
+            endTimeStr == null || endTimeStr.trim().isEmpty()) 
+        {
+            return false;
+        }
+
+        try
+        {
+
+            LocalTime start = LocalTime.parse(startTimeStr.trim(), TIME_FORMATTER);
+            LocalTime end = LocalTime.parse(endTimeStr.trim(), TIME_FORMATTER);
+
+            return start.isBefore(end);
+        }
+        catch(DateTimeParseException e)
+        {
+            return false;
+        }
+
     }
 }
 
@@ -140,21 +189,31 @@ abstract class BasePanel extends JPanel
         window.setVisible(true);
     }
 
-public JPanel createLabeledPanel(String labelText, JComponent component)
-{
-    JPanel panel = new JPanel();
-    panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+    public JPanel createLabeledPanel(String labelText, JComponent component)
+    {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-    JLabel label = new JLabel(labelText);
-    label.setAlignmentX(Component.LEFT_ALIGNMENT);
-    component.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel label = new JLabel(labelText);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        component.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-    panel.add(label);
-    panel.add(Box.createVerticalStrut(4));
-    panel.add(component);
+        panel.add(label);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(component);
 
-    return panel;
-}
+        return panel;
+    }
+
+    public JPanel createCustomLabeledPanel(JLabel label, String text, JTextField field)
+    {
+        JPanel panel = new JPanel(new BorderLayout(0,4));
+        label.setText(text);
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(field, BorderLayout.CENTER);
+
+        return panel;
+    }
 
 
 }
@@ -191,11 +250,11 @@ class ResearchersPanel extends BasePanel
         tab1.add(tab1Scroll, BorderLayout.CENTER);
 
         btnRegister.addActionListener(e ->
-                openWindow("Register", new RegisterPanel())
+                openWindow("Register", new RegisterPanel(0))
                 );
 
         btnSearch.addActionListener(e ->
-                openWindow("Search", new SearchPanel())
+                openWindow("Search", new SearchPanel(0))
                 );
 
         btnRefresh.addActionListener(e ->
@@ -262,8 +321,8 @@ class ResearchersPanel extends BasePanel
                     catch(Exception ex)
                     {
 
-                    JOptionPane.showMessageDialog(this, "Error. Check field", "Error", JOptionPane.ERROR_MESSAGE);
-                    return;
+                        JOptionPane.showMessageDialog(this, "Error. Check field", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
                 });
 
@@ -272,29 +331,56 @@ class ResearchersPanel extends BasePanel
 
 class BookingsPanel extends BasePanel
 {
+
+
     public BookingsPanel()
     {
+
         setLayout(new BorderLayout());
         setBorder(new EmptyBorder(8,8,8,8));
 
         JTabbedPane tabbedPane = new JTabbedPane();
 
-        JPanel tab1 = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        tab1.add(new JLabel("Overview"));
-        tab1.add(new JButton("Refresh"));
-        tab1.add(new JButton("New Booking"));
-        tab1.add(new JButton("Update Booking"));
-        tab1.add(new JButton("Cancel Booking"));
+        JPanel tab1 = new JPanel(new BorderLayout(0,8));
+
+        JPanel tab1Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
+        JButton btnRefresh = new JButton("Refresh");
+        JButton btnRegister = new JButton("Create Booking");
+        tab1Header.add(btnRefresh);
+        tab1Header.add(btnRegister);
 
 
+        JTextArea tab1Output = new JTextArea();
+        tab1Output.setEditable(false);
+        tab1Output.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        tab1Output.setText("Bookings");
+        JScrollPane tab1Scroll = new JScrollPane(tab1Output);
+        tab1.add(tab1Header, BorderLayout.NORTH);
+        tab1.add(tab1Scroll, BorderLayout.CENTER);
 
-        JPanel tab2 = new JPanel(new GridLayout());
-        tab2.add(new JLabel("History"));
+        btnRegister.addActionListener(e ->
+                openWindow("Register", new RegisterPanel(2))
+                );
+
+
+        btnRefresh.addActionListener(e ->
+                {
+
+                    tab1Output.setText(API.getInstance().getAllBookings());
+                    tab1Scroll.getVerticalScrollBar().setValue(0);
+                }
+                );
 
         tabbedPane.addTab("Overview", tab1);
-        tabbedPane.addTab("History", tab2);
 
         add(tabbedPane, BorderLayout.CENTER);
+
+
+        // now populate the output
+        tab1Output.setText(API.getInstance().getAllBookings());
+
+
+
     }
 }
 
@@ -335,11 +421,11 @@ class EquipmentPanel extends BasePanel
         tab1.add(tab1Scroll, BorderLayout.CENTER);
 
         btnRegister.addActionListener(e ->
-                openWindow("Register", new RegisterPanel())
+                openWindow("Register", new RegisterPanel(1))
                 );
 
         btnSearch.addActionListener(e ->
-                openWindow("Search", new SearchPanel())
+                openWindow("Search", new SearchPanel(1))
                 );
 
         btnRefresh.addActionListener(e ->
@@ -412,7 +498,78 @@ class RegisterPanel extends BasePanel
     private JTextField eRepCost;
     private JComboBox eStatus;
 
-    public RegisterPanel()
+    private JTextField bookingDate;
+    private JTextField startTime;
+    private JTextField endTime;
+    private JTextField rID;
+    private JTextField eID;
+    private JTextField bID;
+    private JTextField purpose;
+
+    // why a new format. I felt like it >:)
+    private JLabel lblBID, lblRID, lblEID, lblDate, lblStart, lblEnd, lblPurpose;
+    private JButton btnSubmit;
+    private JLabel modeTitleLabel;
+    private String currentMode = "CREATE";
+
+    private void setFieldState(JTextField field, JLabel label, String baseText, boolean enabled, boolean required) {
+        field.setEnabled(enabled);
+        if (!enabled) {
+            field.setText("");
+        }
+
+        String reqTag = required ? " * required" : "";
+        label.setText(baseText + reqTag);
+    }
+    private void setFormMode(String mode) {
+        this.currentMode = mode;
+
+        switch (mode) {
+            case "CREATE":
+                modeTitleLabel.setText("Mode: Create New Booking");
+                btnSubmit.setText("Create Booking");
+
+                // bID is auto-generated in CREATE mode
+                setFieldState(bID, lblBID, "Booking ID (Auto)", false, false);
+                setFieldState(rID, lblRID, "Researcher ID", true, true);
+                setFieldState(eID, lblEID, "Equipment ID", true, true);
+                setFieldState(bookingDate, lblDate, "Date (dd/MM/yyyy)", true, true);
+                setFieldState(startTime, lblStart, "Start Time (HH:mm)", true, true);
+                setFieldState(endTime, lblEnd, "End Time (HH:mm)", true, true);
+                setFieldState(purpose, lblPurpose, "Purpose", true, true);
+                break;
+
+            case "UPDATE":
+                modeTitleLabel.setText("Mode: Update Existing Booking");
+                btnSubmit.setText("Update Booking");
+
+                // All fields editable in UPDATE mode
+                setFieldState(bID, lblBID, "Booking ID (to update)", true,true);
+                setFieldState(rID, lblRID, "Researcher ID", true,false);
+                setFieldState(eID, lblEID, "Equipment ID", true,false);
+                setFieldState(bookingDate, lblDate, "Date (dd/MM/yyyy)", true,false);
+                setFieldState(startTime, lblStart, "Start Time (HH:mm)", true, false);
+                setFieldState(endTime, lblEnd, "End Time (HH:mm)", true, false);
+                setFieldState(purpose, lblPurpose, "Purpose", true, false);
+                break;
+
+            case "CANCEL":
+                modeTitleLabel.setText("Mode: Cancel/Delete Booking");
+                btnSubmit.setText("Cancel Booking");
+
+                // Only bID is required to cancel a booking
+                setFieldState(bID, lblBID, "Booking ID", true, true);
+                setFieldState(rID, lblRID, "Researcher ID", false, false);
+                setFieldState(eID, lblEID, "Equipment ID", false, false);
+                setFieldState(bookingDate, lblDate, "Date (dd/MM/yyyy)", false, false);
+                setFieldState(startTime, lblStart, "Start Time (HH:mm)", false, false);
+                setFieldState(endTime, lblEnd, "End Time (HH:mm)", false, false);
+                setFieldState(purpose, lblPurpose, "Purpose", false, false);
+                break;
+        }
+    }
+
+    public RegisterPanel(int startingIndex)
     {
 
         setLayout(new BorderLayout());
@@ -513,6 +670,7 @@ class RegisterPanel extends BasePanel
                 {
 
                     JOptionPane.showMessageDialog(null, "Invalid date", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
 
                 }
 
@@ -520,6 +678,7 @@ class RegisterPanel extends BasePanel
                 {
 
                     JOptionPane.showMessageDialog(null, "Replacement cost may not be negative", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
 
                 }
 
@@ -552,11 +711,159 @@ class RegisterPanel extends BasePanel
 
         JPanel tab3 = new JPanel(new BorderLayout(0,8));
 
+        JPanel tab3Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
+        JLabel lblMode = new JLabel("Select mode");
+        JButton btnCreateMode = new JButton("Create Booking");
+        JButton btnUpdateMode = new JButton("Update Booking");
+        JButton btnCancelMode = new JButton("Cancel Booking");
+
+        tab3Header.add(lblMode);
+        tab3Header.add(btnCreateMode);
+        tab3Header.add(btnUpdateMode);
+        tab3Header.add(btnCancelMode);
+
+        JPanel inputGroup3 = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 10));
+        inputGroup3.setPreferredSize(new Dimension(650, 220));
+
+        bID = new JTextField(18);
+        rID = new JTextField(18);
+        eID = new JTextField(18);
+        bookingDate = new JTextField(18);
+        startTime = new JTextField(18);
+        endTime = new JTextField(18);
+        purpose = new JTextField(18);
+
+        lblBID = new JLabel();
+        lblRID = new JLabel();
+        lblEID = new JLabel();
+        lblDate = new JLabel();
+        lblStart = new JLabel();
+        lblEnd = new JLabel();
+        lblPurpose = new JLabel();
+
+        inputGroup3.add(createCustomLabeledPanel(lblBID, "Booking ID", bID));
+        inputGroup3.add(createCustomLabeledPanel(lblRID, "Researcher ID", rID));
+        inputGroup3.add(createCustomLabeledPanel(lblEID, "Equipment ID", eID));
+        inputGroup3.add(createCustomLabeledPanel(lblDate, "Date (dd/MM/yyyy)", bookingDate));
+        inputGroup3.add(createCustomLabeledPanel(lblStart, "Start Time (HH:mm)", startTime));
+        inputGroup3.add(createCustomLabeledPanel(lblEnd, "End Time (HH:mm)", endTime));
+        inputGroup3.add(createCustomLabeledPanel(lblPurpose, "Purpose", purpose));
+
+        JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 20));
+        modeTitleLabel = new JLabel("Current Mode: Create Booking");
+        modeTitleLabel.setFont(modeTitleLabel.getFont().deriveFont(Font.BOLD));
+
+        btnSubmit = new JButton("Submit request");
+
+        footerPanel.add(modeTitleLabel);
+        footerPanel.add(btnSubmit);
+
+        JPanel centerContainer = new JPanel(new BorderLayout());
+        centerContainer.setBorder(BorderFactory.createTitledBorder("Booking details"));
+        centerContainer.add(inputGroup3, BorderLayout.CENTER);
+        centerContainer.add(footerPanel, BorderLayout.SOUTH);
+
+        tab3.add(tab3Header, BorderLayout.NORTH);
+        tab3.add(centerContainer, BorderLayout.CENTER);
+
+        btnCreateMode.addActionListener(e -> setFormMode("CREATE"));
+        btnUpdateMode.addActionListener(e -> setFormMode("UPDATE"));
+        btnCancelMode.addActionListener(e -> setFormMode("CANCEL"));
+
+        btnSubmit.addActionListener(e -> {
+            switch (currentMode) {
+                case "CREATE":
+                    // TODO: Call create logic here
+
+            String bD = bookingDate.getText().trim();
+            String sT = startTime.getText().trim();
+            String eT = endTime.getText().trim();
+            String p = purpose.getText().trim();
+
+            //too lazy to make a method (so i typed it twice :D)
+            Long researcherID;
+            try {
+                String text = rID.getText();
+                researcherID = (text != null && !text.trim().isEmpty()) ? Long.parseLong(text.trim()) : -1L;
+            } catch (NumberFormatException ex) {
+                researcherID = -1L;
+            }
+
+            Long equipmentID;
+            try {
+                String text = eID.getText();
+                equipmentID = (text != null && !text.trim().isEmpty()) ? Long.parseLong(text.trim()) : -1L;
+            } catch (NumberFormatException ex) {
+                equipmentID = -1L;
+            }
+
+            try {
+
+
+                // check the date
+                if (!DateValidator.isValidFutureDate(bD))
+                {
+
+                    JOptionPane.showMessageDialog(null, "Invalid date", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+
+                }
+                // check start and end time is valid
+                if (!TimeValidator.isValidStartEnd(sT, eT))
+                {
+
+                    JOptionPane.showMessageDialog(null, "Invalid time (Use military format)", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+            }
+            catch (Exception ex)
+            {
+
+                JOptionPane.showMessageDialog(null, ex, "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (bD.isEmpty() || sT.isEmpty() || eT.isEmpty() || p.isEmpty() || researcherID == -1 || equipmentID == -1) {
+                JOptionPane.showMessageDialog(this, "All fields are required", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+
+            String success = API.getInstance().createBooking(bD, sT, eT, p, researcherID, equipmentID);
+            if(!success.equalsIgnoreCase("success"))
+            {
+                JOptionPane.showMessageDialog(null, "An error occurred!\n Message: " + success, "Error", JOptionPane.ERROR_MESSAGE);
+            }else {
+                JOptionPane.showMessageDialog(this, "Booking created successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            }
+                    break;
+                case "UPDATE":
+                    // TODO: Call update logic here
+                    break;
+                case "CANCEL":
+                    // TODO: Call cancel logic here
+                    break;
+            }
+        });
+
+
+
+
+
+
+
+
         tabbedPane.add("Researcher", tab1);
         tabbedPane.add("Equipment", tab2);
         tabbedPane.add("Bookings", tab3);
 
         add(tabbedPane, BorderLayout.CENTER);
+
+        tabbedPane.setSelectedIndex(startingIndex);
+
+
+        setFormMode("CREATE");
 
 
 
@@ -571,7 +878,7 @@ class SearchPanel extends BasePanel
     private JTextField depInput;
     private JTextField emailInput;
 
-    public SearchPanel()
+    public SearchPanel(int startingIndex)
     {
 
         setLayout(new BorderLayout());
@@ -675,6 +982,8 @@ class SearchPanel extends BasePanel
         tabbedPane.add("Bookings", tab3);
 
         add(tabbedPane, BorderLayout.CENTER);
+
+        tabbedPane.setSelectedIndex(startingIndex);
 
 
 
