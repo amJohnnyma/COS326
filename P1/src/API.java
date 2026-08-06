@@ -400,15 +400,21 @@ public class API{
         return "None";
     }
 
-    public boolean updateBooking(Long bID)
+    public boolean updateBooking(Long bID, String bD, String sT, String eD, String purpose, Long rID, Long eID)
     {
-        // cannot change equipment or researcher
+
+        // spec is also weird for this
+        // Save Booking in a variable.
+        // Cancel, try recreate
+        // if fail then put old booking and return error message
         // must have valid start/end time
         return false;
     }
 
     public boolean cancelBooking(Long bID)
     {
+        // nah nah nah the spec is so weird...
+
         return false;
     }
 

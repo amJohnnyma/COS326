@@ -64,7 +64,7 @@ final class TimeValidator
     public static boolean isValidStartEnd(String startTimeStr, String endTimeStr)
     {
         if (startTimeStr == null || startTimeStr.trim().isEmpty() ||
-            endTimeStr == null || endTimeStr.trim().isEmpty()) 
+                endTimeStr == null || endTimeStr.trim().isEmpty()) 
         {
             return false;
         }
@@ -771,9 +771,7 @@ class RegisterPanel extends BasePanel
         btnCancelMode.addActionListener(e -> setFormMode("CANCEL"));
 
         btnSubmit.addActionListener(e -> {
-            switch (currentMode) {
-                case "CREATE":
-                    // TODO: Call create logic here
+
 
             String bD = bookingDate.getText().trim();
             String sT = startTime.getText().trim();
@@ -797,49 +795,74 @@ class RegisterPanel extends BasePanel
                 equipmentID = -1L;
             }
 
+            Long bookingID;
             try {
-
-
-                // check the date
-                if (!DateValidator.isValidFutureDate(bD))
-                {
-
-                    JOptionPane.showMessageDialog(null, "Invalid date", "Error", JOptionPane.ERROR_MESSAGE);
-                    return;
-
-                }
-                // check start and end time is valid
-                if (!TimeValidator.isValidStartEnd(sT, eT))
-                {
-
-                    JOptionPane.showMessageDialog(null, "Invalid time (Use military format)", "Error", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-            }
-            catch (Exception ex)
-            {
-
-                JOptionPane.showMessageDialog(null, ex, "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            if (bD.isEmpty() || sT.isEmpty() || eT.isEmpty() || p.isEmpty() || researcherID == -1 || equipmentID == -1) {
-                JOptionPane.showMessageDialog(this, "All fields are required", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
+                String text = bID.getText();
+                bookingID = (text != null && !text.trim().isEmpty()) ? Long.parseLong(text.trim()) : -1L;
+            } catch (NumberFormatException ex) {
+                bookingID = -1L;
             }
 
 
-            String success = API.getInstance().createBooking(bD, sT, eT, p, researcherID, equipmentID);
-            if(!success.equalsIgnoreCase("success"))
-            {
-                JOptionPane.showMessageDialog(null, "An error occurred!\n Message: " + success, "Error", JOptionPane.ERROR_MESSAGE);
-            }else {
-                JOptionPane.showMessageDialog(this, "Booking created successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-            }
+            switch (currentMode) {
+                case "CREATE":
+                    // TODO: Call create logic here
+
+                    try {
+                        // check the date
+                        if (!DateValidator.isValidFutureDate(bD))
+                        {
+
+                            JOptionPane.showMessageDialog(null, "Invalid date", "Error", JOptionPane.ERROR_MESSAGE);
+                            return;
+
+                        }
+                        // check start and end time is valid
+                        if (!TimeValidator.isValidStartEnd(sT, eT))
+                        {
+
+                            JOptionPane.showMessageDialog(null, "Invalid time (Use military format)", "Error", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {
+
+                        JOptionPane.showMessageDialog(null, ex, "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    if (bD.isEmpty() || sT.isEmpty() || eT.isEmpty() || p.isEmpty() || researcherID == -1 || equipmentID == -1) {
+                        JOptionPane.showMessageDialog(this, "All fields are required", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+
+                    String success = API.getInstance().createBooking(bD, sT, eT, p, researcherID, equipmentID);
+                    if(!success.equalsIgnoreCase("success"))
+                    {
+                        JOptionPane.showMessageDialog(null, "An error occurred!\n Message: " + success, "Error", JOptionPane.ERROR_MESSAGE);
+                    }else {
+                        JOptionPane.showMessageDialog(this, "Booking created successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    }
                     break;
                 case "UPDATE":
-                    // TODO: Call update logic here
+                    // CANCEL BOOKING THEN CREATE BOOKING :)
+                    if(bookingID != -1)
+                    {
+
+                        if(!bD.isEmpty() || !sT.isEmpty() || !eT.isEmpty() || !p.isEmpty() || researcherID != -1 || equipmentID != -1)
+                        {
+
+
+
+                            return;
+                        } 
+                    }
+
+                    JOptionPane.showMessageDialog(null, "Provide Booking ID and atleast one field", "Error", JOptionPane.ERROR_MESSAGE);
+
                     break;
                 case "CANCEL":
                     // TODO: Call cancel logic here
