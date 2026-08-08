@@ -141,7 +141,7 @@ public class APITest {
     @DisplayName("Test 4: Create Valid Booking")
     public void testCreateValidBooking() {
         runTest("Test 4: Create Valid Booking", () -> {
-            String result = api.createBooking("28/08/2026", "10:00", "12:00", "Spectral Analysis", 1L, 1L);
+String result = api.createBooking("28/08/2026", "10:00", "12:00", "Spectral Analysis", 11L, 1L);
             assertEquals("Success", result, "Valid booking creation should return 'Success'");
         });
     }
@@ -221,8 +221,8 @@ public void testGetEquipmentSummary() {
             assertNotEquals("None", api.getResearcherBookings(1L), "getResearcherBookings() needs implementation");
             assertNotEquals("None", api.getUnusedEquipment(), "getUnusedEquipment() needs implementation");
             assertNotEquals("None", api.getHighestBookingResearchers(), "getHighestBookingResearchers() needs implementation");
-            assertTrue(api.updateBooking(1L), "updateBooking() needs implementation");
-            assertTrue(api.cancelBooking(1L), "cancelBooking() needs implementation");
+assertTrue(api.updateBooking(1L, "01/09/2026", "10:00", "12:00", "Updated Purpose", 11L, 1L), "updateBooking() needs implementation");
+assertTrue(api.cancelBooking(2L), "cancelBooking() needs implementation");
         });
     }
 }

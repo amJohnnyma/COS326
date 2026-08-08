@@ -37,10 +37,17 @@ public class Equipment implements Serializable {
 
     public void addBooking(Booking booking)
     {
+        if (booking != null && !this.bookings.contains(booking)) {
+            this.bookings.add(booking);
+            booking.setEquipment(this);
+        }
     }
 
     public void removeBooking(Long bID)
     {
+        if (bID != null) {
+            this.bookings.removeIf(b -> bID.equals(b.getbID()));
+        }
     }
 
     public Long getrID() {

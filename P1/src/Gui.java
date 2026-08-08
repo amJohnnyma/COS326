@@ -235,10 +235,8 @@ class ResearchersPanel extends BasePanel
         JPanel tab1Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
         JButton btnRefresh = new JButton("Refresh");
         JButton btnRegister = new JButton("Register");
-        JButton btnSearch = new JButton("Search");
         tab1Header.add(btnRefresh);
         tab1Header.add(btnRegister);
-        tab1Header.add(btnSearch);
 
 
         JTextArea tab1Output = new JTextArea();
@@ -253,9 +251,6 @@ class ResearchersPanel extends BasePanel
                 openWindow("Register", new RegisterPanel(0))
                 );
 
-        btnSearch.addActionListener(e ->
-                openWindow("Search", new SearchPanel(0))
-                );
 
         btnRefresh.addActionListener(e ->
                 {
@@ -324,6 +319,13 @@ class ResearchersPanel extends BasePanel
                         JOptionPane.showMessageDialog(this, "Error. Check field", "Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
+                });
+
+        mostBookingsBtn.addActionListener(e -> 
+                {
+
+                    String result = API.getInstance().getHighestBookingResearchers();
+                    tab2Output.setText(result);
                 });
 
     }
@@ -399,11 +401,9 @@ class EquipmentPanel extends BasePanel
         JPanel tab1Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
         JButton btnRefresh = new JButton("Refresh");
         JButton btnRegister = new JButton("Register");
-        JButton btnSearch = new JButton("Search");
         JLabel lblSummary = new JLabel("No summary available");
         tab1Header.add(btnRefresh);
         tab1Header.add(btnRegister);
-        tab1Header.add(btnSearch);
 
 
         lblSummary.setText(API.getInstance().getEquipmentSummary());
@@ -424,9 +424,6 @@ class EquipmentPanel extends BasePanel
                 openWindow("Register", new RegisterPanel(1))
                 );
 
-        btnSearch.addActionListener(e ->
-                openWindow("Search", new SearchPanel(1))
-                );
 
         btnRefresh.addActionListener(e ->
                 {
@@ -450,11 +447,13 @@ class EquipmentPanel extends BasePanel
         JTextField eID= new JTextField("ENTER EQUIPMENT ID", 18);
         JButton checkBookingsBtn = new JButton("Check history");
         JButton checkAvailablebtn = new JButton("Check Available");
+        JButton neverBookedBtn = new JButton("Unused Equipment");
 
 
         searchGroup.add(eID);
         searchGroup.add(checkBookingsBtn);
         searchGroup.add(checkAvailablebtn);
+searchGroup.add(neverBookedBtn);
 
 
         tab2Header.add(searchGroup);
@@ -476,12 +475,26 @@ class EquipmentPanel extends BasePanel
 
         // now populate the output
         tab1Output.setText(API.getInstance().getAllEquipmentOutput());
+checkBookingsBtn.addActionListener(e -> {
+            try {
+                String txt = eID.getText().trim();
+                Long id = Long.parseLong(txt);
+                String result = API.getInstance().searchEquipment(id);
+                tab2Output.setText(result);
+            } catch(Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error: Enter a valid numeric Equipment ID", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
         checkAvailablebtn.addActionListener(e -> 
                 {
                     String result = API.getInstance().getAvailableEquipment();
                     tab2Output.setText(result);
                 });
+neverBookedBtn.addActionListener(e -> {
+            String result = API.getInstance().getUnusedEquipment();
+            tab2Output.setText(result);
+        });
     }
 }
 
@@ -849,23 +862,29 @@ class RegisterPanel extends BasePanel
                     break;
                 case "UPDATE":
                     // CANCEL BOOKING THEN CREATE BOOKING :)
-                    if(bookingID != -1)
-                    {
-
-                        if(!bD.isEmpty() || !sT.isEmpty() || !eT.isEmpty() || !p.isEmpty() || researcherID != -1 || equipmentID != -1)
-                        {
-
-
-
-                            return;
-                        } 
+                    if (bookingID == -1) {
+                        JOptionPane.showMessageDialog(this, "Provide a valid Booking ID to update", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
-
-                    JOptionPane.showMessageDialog(null, "Provide Booking ID and atleast one field", "Error", JOptionPane.ERROR_MESSAGE);
-
+                    boolean updated = API.getInstance().updateBooking(bookingID, bD, sT, eT, p, researcherID, equipmentID);
+                    if (updated) {
+                        JOptionPane.showMessageDialog(this, "Booking updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to update booking. Check details.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
                     break;
                 case "CANCEL":
                     // TODO: Call cancel logic here
+                    if (bookingID == -1) {
+                        JOptionPane.showMessageDialog(this, "Provide a valid Booking ID to cancel", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    boolean cancelled = API.getInstance().cancelBooking(bookingID);
+                    if (cancelled) {
+                        JOptionPane.showMessageDialog(this, "Booking cancelled successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to cancel booking. ID not found.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
                     break;
             }
         });
@@ -894,122 +913,3 @@ class RegisterPanel extends BasePanel
     }
 }
 
-class SearchPanel extends BasePanel
-{
-    private JTextField fNameInput;
-    private JTextField sNameInput;
-    private JTextField depInput;
-    private JTextField emailInput;
-
-    public SearchPanel(int startingIndex)
-    {
-
-        setLayout(new BorderLayout());
-        setBorder(new EmptyBorder(8,8,8,8));
-
-        JTabbedPane tabbedPane = new JTabbedPane();
-
-        JPanel tab1 = new JPanel(new BorderLayout(0,8));
-
-        JPanel tab1Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
-        JButton btnSearch = new JButton("Search");
-        tab1Header.add(btnSearch);
-
-        JPanel inputGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 5));
-        inputGroup.setBorder(BorderFactory.createTitledBorder("Enter Details for Search"));
-
-        //is this slow? probably fine
-        fNameInput = new JTextField(18);
-        sNameInput = new JTextField(18);
-        depInput   = new JTextField(18);
-        emailInput = new JTextField(18);
-        JTextField IDInput = new JTextField(18);
-
-
-        inputGroup.add(createLabeledPanel("ID:", IDInput));
-        inputGroup.add(createLabeledPanel("First Name:", fNameInput));
-        inputGroup.add(createLabeledPanel("Last Name:", sNameInput));
-        inputGroup.add(createLabeledPanel("Department:", depInput));
-        inputGroup.add(createLabeledPanel("Email:", emailInput));
-
-        btnSearch.addActionListener(e -> {
-            String firstName = fNameInput.getText().trim();
-            String lastName = sNameInput.getText().trim();
-            String department = depInput.getText().trim();
-            String email = emailInput.getText().trim();
-            String id = IDInput.getText().trim();
-
-            if (firstName.isEmpty() && lastName.isEmpty() && department.isEmpty() &&email.isEmpty() && id.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Atleast one field is required!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            System.out.println("Searching for: ");
-            System.out.println("Researcher: " + firstName + " " + lastName);
-            System.out.println("Dept: " + department + " | Email: " + email);
-        });
-
-
-        tab1.add(tab1Header, BorderLayout.NORTH);
-        tab1.add(inputGroup, BorderLayout.CENTER);
-
-
-        JPanel tab2 = new JPanel(new BorderLayout(0,8));
-
-        JPanel tab2Header = new JPanel(new FlowLayout(FlowLayout.LEFT, 8,0));
-        JButton btnSearch2 = new JButton("Search");
-        tab2Header.add(btnSearch2);
-
-        JPanel inputGroup2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 5));
-        inputGroup2.setBorder(BorderFactory.createTitledBorder("Enter Details for Search"));
-
-        //is this slow? probably fine
-        JTextField eIDInput = new JTextField(18);
-        JTextField  eNameInput = new JTextField(18);
-        JTextField eCatInput= new JTextField(18);
-        JTextField  eDateInput= new JTextField(18);
-        JTextField repCostInput= new JTextField(18);
-        JTextField statusInput= new JTextField(18);
-
-
-        inputGroup2.add(createLabeledPanel("ID:", eIDInput));
-        inputGroup2.add(createLabeledPanel("Name:", eNameInput));
-        inputGroup2.add(createLabeledPanel("Category:",eCatInput));
-        inputGroup2.add(createLabeledPanel("Purchase Date:", eDateInput));
-        inputGroup2.add(createLabeledPanel("Replacement Cost:", repCostInput));
-        inputGroup2.add(createLabeledPanel("Status:", statusInput));
-
-        btnSearch2.addActionListener(e -> {
-            String eName = eNameInput.getText().trim();
-            String  eCat= eCatInput.getText().trim();
-            String ePD= eDateInput.getText().trim();
-            String eRepCost= repCostInput.getText().trim();
-            String eStatus= statusInput.getText().trim();
-            String eID = eIDInput.getText().trim();
-
-            if (eName.isEmpty() && eCat.isEmpty() && ePD.isEmpty() && eRepCost.isEmpty() && eStatus.isEmpty() && eID.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Atleast one field is required!", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-        });
-
-
-        tab2.add(tab2Header, BorderLayout.NORTH);
-        tab2.add(inputGroup2, BorderLayout.CENTER);
-
-        JPanel tab3 = new JPanel(new BorderLayout(0,8));
-
-        tabbedPane.add("Researcher", tab1);
-        tabbedPane.add("Equipment", tab2);
-        tabbedPane.add("Bookings", tab3);
-
-        add(tabbedPane, BorderLayout.CENTER);
-
-        tabbedPane.setSelectedIndex(startingIndex);
-
-
-
-
-    }
-}

@@ -37,76 +37,106 @@ public class API{
 
     public void populate()
     {
-        EntityManager em = emf.createEntityManager();
-        try
-        {
-            em.getTransaction().begin();
+        System.out.println("\n==================================================");
+        System.out.println("          STARTING DATABASE POPULATION            ");
+        System.out.println("==================================================");
 
-            // keep references for making bookings later
-            List<Researcher> researchers = new ArrayList<>();
-            List<Equipment> equipment = new ArrayList<>();
-
-            //create 10 Researchers
-            for (int i = 1; i <= 10; i ++)
-            {
-                Researcher r = new Researcher(
-                        "Researcher: " + i,
-                        "Department " + ((i % 3) + 1),
-                        "researcher" + i + "@up.ac.za"
-                        );
-                em.persist(r);
-                researchers.add(r);
-            }
-
-            //create 30 Equipment
-            for (int i = 1; i <= 30; i ++)
-            {
-                Equipment r = new Equipment(
-                        "Equipment: " + i,
-                        "Category" + ((i % 4) + 1),
-                        String.format("%02d", i)+ "/08/2026"  ,
-                        500.0 * i,
-                        (i % 5 == 0) ? "Out of service" : "Available"
-                        );
-                em.persist(r);
-                equipment.add(r);
-            }
-
-            // create 50 bookings
-            for (int i = 1; i <= 50; i ++)
-            {
-                Researcher r = researchers.get(i % researchers.size());
-                Equipment e = equipment.get(i % equipment.size());
-
-                Booking b = new Booking(
-                        String.format("%02d", (i % 25) + 1) + "/08/2026"  ,
-                        "08:00",
-                        "12:00",
-                        "Research Project " + i,
-                        r,
-                        e
-                        );
-
-                if (r.getBookings() != null) r.getBookings().add(b);
-                if (e.getBookings() != null) e.getBookings().add(b);
-
-                em.persist(b);
-            }
-
-            em.getTransaction().commit();
+        // 1. Create 10 Researchers using registerResearcher()
+        int resSuccess = 0;
+        for (int i = 1; i <= 10; i++) {
+            boolean ok = registerResearcher(
+                    "Researcher: " + i,
+                    "Department " + ((i % 3) + 1),
+                    "researcher" + i + "@up.ac.za"
+                    );
+            if (ok) resSuccess++;
         }
-        catch(Exception ex)
-        {
-            if(em.getTransaction().isActive())
-            {
-                em.getTransaction().rollback();
+        System.out.println("✔ Registered " + resSuccess + "/10 Researchers using registerResearcher()");
+
+        // 2. Create 30 Equipment using registerEquipment() (Every 5th is 'Out of service')
+        int eqSuccess = 0;
+        for (int i = 1; i <= 30; i++) {
+            String status = (i % 5 == 0) ? "Out of service" : "Available";
+            boolean ok = registerEquipment(
+                    "Equipment: " + i,
+                    "Category" + ((i % 4) + 1),
+                    String.format("%02d", i) + "/08/2026",
+                    500.0 * i,
+                    status
+                    );
+            if (ok) eqSuccess++;
+        }
+        System.out.println("✔ Registered " + eqSuccess + "/30 Equipment items using registerEquipment()");
+
+        // 3. Seed Bookings using createBooking()
+        System.out.println("\n--- Seeding Bookings via createBooking() ---");
+        int successBookings = 0;
+
+        // Loop to create past and future valid bookings across available equipment and researchers
+        for (int i = 1; i <= 50; i++) {
+            Long rID = (long) ((i % 10) + 1);
+            Long eID = (long) ((i % 30) + 1);
+
+            // Spread dates across July (past) and August (present/future)
+            String dateStr = (i <= 25) 
+                ? String.format("%02d/07/2026", (i % 20) + 1)
+                : String.format("%02d/08/2026", (i % 25) + 1);
+
+            int startHour = 8 + ((i / 30) * 3);
+            String startTime = String.format("%02d:00", startHour);
+            String endTime = String.format("%02d:00", startHour + 2);
+
+            String result = createBooking(
+                    dateStr,
+                    startTime,
+                    endTime,
+                    "Research Project " + i,
+                    rID,
+                    eID
+                    );
+
+            if ("Success".equalsIgnoreCase(result)) {
+                successBookings++;
             }
-            ex.printStackTrace();
         }
-        finally
-        {
-            em.close();
-        }
+        System.out.println("✔ Successfully created " + successBookings + " valid bookings using createBooking()");
+
+        // 4. Test and print Business Rule outputs to terminal
+        System.out.println("\n--------------------------------------------------");
+        System.out.println("       BUSINESS RULE VERIFICATION TESTS           ");
+        System.out.println("--------------------------------------------------");
+
+        // Rule Test A: Book Out of Service Equipment (eID = 5)
+        String rA = createBooking("15/08/2026", "09:00", "11:00", "Test Out of Service", 1L, 5L);
+        System.out.println("Rule Check [Out of Service Equipment]: " + rA);
+
+        // Rule Test B: Time overlap / Buffer (<10 mins)
+        createBooking("20/08/2026", "10:00", "12:00", "Base Slot", 1L, 1L);
+        String rB = createBooking("20/08/2026", "12:05", "14:00", "Overlap Slot", 2L, 1L);
+        System.out.println("Rule Check [10-Min Buffer Overlap]:    " + rB);
+
+        // Rule Test C: Max 3 Active Bookings
+        createBooking("25/08/2026", "08:00", "09:00", "Active 1", 3L, 2L);
+        createBooking("25/08/2026", "10:00", "11:00", "Active 2", 3L, 3L);
+        createBooking("25/08/2026", "12:00", "13:00", "Active 3", 3L, 4L);
+        String rC = createBooking("25/08/2026", "14:00", "15:00", "Active 4 (Should Fail)", 3L, 6L);
+        System.out.println("Rule Check [Max 3 Active Bookings]:    " + rC);
+
+        // 5. Output Query Results to Terminal
+        System.out.println("\n==================================================");
+        System.out.println("            QUERY OUTPUTS FROM DATABASE           ");
+        System.out.println("==================================================");
+
+        System.out.println("\n--- 1. Equipment Summary ---");
+        System.out.println(getEquipmentSummary());
+
+        System.out.println("\n--- 2. Top Researcher with Most Bookings ---");
+        System.out.println(getHighestBookingResearchers());
+
+        System.out.println("\n--- 3. Unused Equipment ---");
+        System.out.println(getUnusedEquipment());
+
+        System.out.println("==================================================\n");
     }
 
 
@@ -270,7 +300,7 @@ public class API{
             }
 
             TypedQuery<Booking> eqBookingsQuery = em.createQuery(
-                    "SELECT b FROM Booking b WHERE b.equipment.eID = :eID AND b.bookingDate = :bDate", Booking.class)
+                    "SELECT b FROM Booking b WHERE b.equipment.eID = :eID AND b.date = :bDate", Booking.class)
                 .setParameter("eID", eID)
                 .setParameter("bDate", bDate);
             List<Booking> equipmentSameDayBookings = eqBookingsQuery.getResultList();
@@ -325,15 +355,36 @@ public class API{
                     Booking.class);
             List<Booking> bookings = query.getResultList();
 
-            StringBuilder sb = new StringBuilder();
+            if (bookings.isEmpty()) return "No bookings found";
 
-            for(Booking b: bookings)
-            {
-                sb.append(b.toString()).append("\n");
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT);
+
+            LocalDate today = LocalDate.now();
+            LocalTime now = LocalTime.now();
+
+            StringBuilder upcomingSb = new StringBuilder();
+            StringBuilder pastSb = new StringBuilder();
+
+            for (Booking b : bookings) {
+                LocalDate bDate = LocalDate.parse(b.getDate(), dateFormatter);
+                LocalTime bEnd = LocalTime.parse(b.getEndTime(), timeFormatter);
+
+                if (bDate.isAfter(today) || (bDate.isEqual(today) && bEnd.isAfter(now))) {
+                    upcomingSb.append("  - ").append(b.toString()).append("\n");
+                } else {
+                    pastSb.append("  - ").append(b.toString()).append("\n");
+                }
             }
 
-            String resultText = sb.toString();
-            return resultText.isEmpty() ? "No bookings found" : resultText;
+            StringBuilder sb = new StringBuilder();
+            sb.append("--- UPCOMING BOOKINGS ---\n");
+            sb.append(upcomingSb.length() == 0 ? "  No upcoming bookings.\n" : upcomingSb);
+            sb.append("\n--- PAST BOOKINGS ---\n");
+            sb.append(pastSb.length() == 0 ? "  No past bookings.\n" : pastSb);
+
+            return sb.toString();
+
 
         }
         catch (Exception ex)
@@ -368,9 +419,15 @@ public class API{
 
                 List<Booking> bookings = r.getBookings();
 
+                DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
+                LocalDate today = LocalDate.now();
                 for(Booking b : bookings)
                 {
-                    sb.append(b.toString()).append("\n");
+                    LocalDate bookingDate = LocalDate.parse(b.getDate(), dateFormatter);
+
+                    if (!bookingDate.isBefore(today)) {
+                        sb.append(b.toString()).append("\n");
+                    }
                 }
 
             }
@@ -397,7 +454,29 @@ public class API{
 
     public String searchResearcher(Long rID, String name, String department, String email)
     {
-        return "None";
+        EntityManager em = emf.createEntityManager();
+        try {
+            TypedQuery<Researcher> query = em.createQuery(
+                    "SELECT r FROM Researcher r WHERE " +
+                    "(:rID IS NULL OR r.rID = :rID) AND " +
+                    "(:name IS NULL OR LOWER(r.fullName) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
+                    "(:dept IS NULL OR LOWER(r.department) LIKE LOWER(CONCAT('%', :dept, '%'))) AND " +
+                    "(:email IS NULL OR LOWER(r.email) LIKE LOWER(CONCAT('%', :email, '%')))",
+                    Researcher.class);
+            query.setParameter("rID", rID);
+            query.setParameter("name", name.isEmpty() ? null : name);
+            query.setParameter("dept", department.isEmpty() ? null : department);
+            query.setParameter("email", email.isEmpty() ? null : email);
+
+            List<Researcher> results = query.getResultList();
+            if (results.isEmpty()) return "No researchers found";
+
+            StringBuilder sb = new StringBuilder();
+            for (Researcher r : results) sb.append(r.toString()).append("\n");
+            return sb.toString();
+        } finally {
+            em.close();
+        }
     }
 
     public boolean updateBooking(Long bID, String bD, String sT, String eD, String purpose, Long rID, Long eID)
@@ -408,14 +487,123 @@ public class API{
         // Cancel, try recreate
         // if fail then put old booking and return error message
         // must have valid start/end time
+EntityManager em = emf.createEntityManager();
+    DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
+    DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT);
+
+    try {
+        em.getTransaction().begin();
+
+        Booking b = em.find(Booking.class, bID);
+        if (b == null) {
+            if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            return false;
+        }
+        Researcher researcher = em.find(Researcher.class, rID);
+        if (researcher == null) {
+            em.getTransaction().rollback();
+            return false;
+        }
+
+        Equipment equipment = em.find(Equipment.class, eID);
+        if (equipment == null || !"Available".equalsIgnoreCase(equipment.getStatus())) {
+            em.getTransaction().rollback();
+            return false;
+        }
+
+        LocalDate newDate = LocalDate.parse(bD, dateFormatter);
+        LocalTime newStart = LocalTime.parse(sT, timeFormatter);
+        LocalTime newEnd = LocalTime.parse(eD, timeFormatter);
+
+        TypedQuery<Booking> resBookingsQuery = em.createQuery(
+            "SELECT b FROM Booking b WHERE b.researcher.rID = :rID AND b.bID <> :bID", Booking.class)
+            .setParameter("rID", rID)
+            .setParameter("bID", bID);
+        List<Booking> rBookings = resBookingsQuery.getResultList();
+
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+        long activeCount = 0;
+
+        for (Booking existing : rBookings) {
+            LocalDate bDateParsed = LocalDate.parse(existing.getDate(), dateFormatter);
+            LocalTime bEndParsed = LocalTime.parse(existing.getEndTime(), timeFormatter);
+
+            if (bDateParsed.isAfter(today) || (bDateParsed.isEqual(today) && bEndParsed.isAfter(now))) {
+                if (existing.getEquipment().getrID().equals(eID) && bDateParsed.isEqual(newDate)) {
+                    em.getTransaction().rollback();
+                    return false; // Already booked this equipment on the same day
+                }
+                activeCount++;
+            }
+        }
+
+        if (activeCount >= 3) {
+            em.getTransaction().rollback();
+            return false; // Exceeds 3 active bookings limit
+        }
+
+        TypedQuery<Booking> eqBookingsQuery = em.createQuery(
+            "SELECT b FROM Booking b WHERE b.equipment.eID = :eID AND b.date = :bD AND b.bID <> :bID", Booking.class)
+            .setParameter("eID", eID)
+            .setParameter("bD", bD)
+            .setParameter("bID", bID);
+        List<Booking> equipmentSameDayBookings = eqBookingsQuery.getResultList();
+
+        for (Booking existing : equipmentSameDayBookings) {
+            LocalTime existingStart = LocalTime.parse(existing.getStartTime(), timeFormatter);
+            LocalTime existingEnd = LocalTime.parse(existing.getEndTime(), timeFormatter);
+
+            LocalTime bufferedStart = existingStart.minusMinutes(10);
+            LocalTime bufferedEnd = existingEnd.plusMinutes(10);
+
+            if (newStart.isBefore(bufferedEnd) && newEnd.isAfter(bufferedStart)) {
+                em.getTransaction().rollback();
+                return false; // Time conflict / buffer overlap
+            }
+        }
+
+        // Perform safe update
+        b.setDate(bD);
+        b.setStartTime(sT);
+        b.setEndTime(eD);
+        b.setPurpose(purpose);
+        b.setResearcher(researcher);
+        b.setEquipment(equipment);
+
+        em.getTransaction().commit();
+        return true;
+
+    } catch (Exception ex) {
+        if (em.getTransaction().isActive()) {
+            em.getTransaction().rollback();
+        }
+        ex.printStackTrace();
         return false;
+    } finally {
+        em.close();
+    }
     }
 
     public boolean cancelBooking(Long bID)
     {
-        // nah nah nah the spec is so weird...
+        EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+            Booking b = em.find(Booking.class, bID);
+            if (b != null) {
+                em.remove(b);
+                em.getTransaction().commit();
+                return true;
+            }
+            return false;
+        } catch (Exception ex) {
+            if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            return false;
+        } finally {
+            em.close();
+        }
 
-        return false;
     }
 
     public String getEquipmentSummary()
@@ -527,17 +715,115 @@ public class API{
 
     public String getResearcherBookings(Long rID)
     {
-        return "None";
+        EntityManager em = emf.createEntityManager();
+        try {
+            TypedQuery<Booking> query = em.createQuery(
+                    "SELECT b FROM Booking b WHERE b.researcher.rID = :rID", Booking.class);
+            query.setParameter("rID", rID);
+            List<Booking> list = query.getResultList();
+            if (list.isEmpty()) return "No bookings found for researcher";
+
+            StringBuilder sb = new StringBuilder();
+            for (Booking b : list) sb.append(b.toString()).append("\n");
+            return sb.toString();
+        } finally {
+            em.close();
+        }
     }
 
     public String getUnusedEquipment()
     {
-        return "None";
+        EntityManager em = emf.createEntityManager();
+        try {
+            TypedQuery<Equipment> allEqQuery = em.createQuery("SELECT e FROM Equipment e", Equipment.class);
+            List<Equipment> allEquipment = allEqQuery.getResultList();
+
+            TypedQuery<Equipment> bookedEqQuery = em.createQuery("SELECT DISTINCT b.equipment FROM Equipment_Bookings_Subquery", Equipment.class); 
+            TypedQuery<Equipment> bookedQuery = em.createQuery("SELECT DISTINCT b.equipment FROM Booking b", Equipment.class);
+            List<Equipment> bookedEquipment = bookedQuery.getResultList();
+
+            allEquipment.removeAll(bookedEquipment);
+
+            if (allEquipment.isEmpty()) return "No unused equipment found";
+
+            StringBuilder sb = new StringBuilder();
+            for (Equipment e : allEquipment) {
+                sb.append(e.toString()).append("\n");
+            }
+            return sb.toString();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "Error";
+        } finally {
+            em.close();
+        }
     }
 
     public String getHighestBookingResearchers()
     {
-        return "None";
+        EntityManager em = emf.createEntityManager();
+        try {
+            TypedQuery<Researcher> query = em.createQuery(
+                    "SELECT r FROM Researcher r LEFT JOIN r.bookings b GROUP BY r ORDER BY COUNT(b) DESC", 
+                    Researcher.class
+                    );
+            query.setMaxResults(1);
+            List<Researcher> list = query.getResultList();
+
+            if (list.isEmpty()) {
+                return "No researchers found";
+            }
+
+            Researcher topResearcher = list.get(0);
+            StringBuilder sb = new StringBuilder();
+            sb.append(topResearcher.toString()).append("\n");
+
+            List<Booking> bookings = topResearcher.getBookings();
+            if (bookings.isEmpty()) {
+                sb.append("  No bookings found for this researcher.\n");
+            } else {
+                DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
+                DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT);
+
+                LocalDate today = LocalDate.now();
+                LocalTime now = LocalTime.now();
+
+                StringBuilder upcomingSb = new StringBuilder();
+                StringBuilder pastSb = new StringBuilder();
+
+                for (Booking b : bookings) {
+                    LocalDate bDate = LocalDate.parse(b.getDate(), dateFormatter);
+                    LocalTime bEnd = LocalTime.parse(b.getEndTime(), timeFormatter);
+
+                    // Categorize into Upcoming vs Past
+                    if (bDate.isAfter(today) || (bDate.isEqual(today) && bEnd.isAfter(now))) {
+                        upcomingSb.append("  - ").append(b.toString()).append("\n");
+                    } else {
+                        pastSb.append("  - ").append(b.toString()).append("\n");
+                    }
+                }
+
+                // Build output section for UPCOMING BOOKINGS
+                sb.append("\n  --- UPCOMING BOOKINGS ---\n");
+                if (upcomingSb.length() == 0) {
+                    sb.append("    No upcoming bookings.\n");
+                } else {
+                    sb.append(upcomingSb);
+                }
+
+                // Build output section for PAST BOOKINGS
+                sb.append("\n  --- PAST BOOKINGS ---\n");
+                if (pastSb.length() == 0) {
+                    sb.append("    No past bookings.\n");
+                } else {
+                    sb.append(pastSb);
+                }
+            }
+
+            return sb.toString();
+        } finally {
+            em.close();
+        }
     }
 
     public String getAllResearcherOutput()
@@ -575,6 +861,57 @@ public class API{
 
 
     }
+public String searchEquipment(Long eID) {
+    EntityManager em = emf.createEntityManager();
+    try {
+        Equipment eq = em.find(Equipment.class, eID);
+        if (eq == null) return "Equipment with ID " + eID + " not found.";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(eq.toString()).append("\n");
+
+        TypedQuery<Booking> query = em.createQuery(
+            "SELECT b FROM Booking b WHERE b.equipment.eID = :eID", Booking.class);
+        query.setParameter("eID", eID);
+        List<Booking> bookings = query.getResultList();
+
+        if (bookings.isEmpty()) {
+            sb.append("  No bookings found for this equipment.\n");
+        } else {
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT);
+
+            LocalDate today = LocalDate.now();
+            LocalTime now = LocalTime.now();
+
+            StringBuilder upcomingSb = new StringBuilder();
+            StringBuilder pastSb = new StringBuilder();
+
+            for (Booking b : bookings) {
+                LocalDate bDate = LocalDate.parse(b.getDate(), dateFormatter);
+                LocalTime bEnd = LocalTime.parse(b.getEndTime(), timeFormatter);
+
+                if (bDate.isAfter(today) || (bDate.isEqual(today) && bEnd.isAfter(now))) {
+                    upcomingSb.append("  - ").append(b.toString()).append("\n");
+                } else {
+                    pastSb.append("  - ").append(b.toString()).append("\n");
+                }
+            }
+
+            sb.append("\n  --- UPCOMING BOOKINGS ---\n");
+            sb.append(upcomingSb.length() == 0 ? "    No upcoming bookings.\n" : upcomingSb);
+            sb.append("\n  --- PAST BOOKINGS ---\n");
+            sb.append(pastSb.length() == 0 ? "    No past bookings.\n" : pastSb);
+        }
+
+        return sb.toString();
+    } catch (Exception ex) {
+        ex.printStackTrace();
+        return "Error searching equipment";
+    } finally {
+        em.close();
+    }
+}
 
 
 
