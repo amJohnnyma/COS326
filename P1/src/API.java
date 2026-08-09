@@ -315,7 +315,7 @@ public class API{
 
                 // Check if the new time range overlaps with (existing slot ± 10 min)
                 // Two time ranges [A, B] and [C, D] overlap if A < D and B > C
-                if (newStart.isBefore(bufferedEnd) && newEnd.isAfter(bufferedStart)) {
+                if (newStart.isBefore(bufferedEnd)) {
                     return "Time overlap in bookings. Existing booking time: " + existingStart.toString() + " - " + existingEnd.toString(); // Less than 10 minutes apart or overlapped
                 }
             }

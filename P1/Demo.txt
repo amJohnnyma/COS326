@@ -1,0 +1,41 @@
+Delete system.odb
+
+
+cd into P1
+-> make
+
+Open Researchers, Equipment, Booking windows
+
+
+Populate odb. Refresh all windows
+
+
+Register Researcher
+
+Register Equipment
+
+Search new researcher
+
+Search new Equipment
+
+Show equipment summary.
+
+Display currently available equipment
+
+Display all bookings of new researcher
+
+Create 3x bookings for new researcher
+1. New equipment
+2. New equipment same day as prev booking (Should be false)
+3. Old equipment overlapping time (Should be false)
+4. Old equipment
+4. Old equipment
+
+Create a fourth booking using new equipment on the same day (Should be false)
+
+Display researcher with highest bookings
+
+Update any booking
+
+Cancel any booking
+
